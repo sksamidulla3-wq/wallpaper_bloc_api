@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:wallpaper_bloc_api/screens/previewpage.dart';
 import 'package:wallpaper_bloc_api/screens/search%20bloc/search_bloc.dart';
-
 import '../models/models.dart';
 
 class SearchScreen extends StatefulWidget {
@@ -20,6 +19,9 @@ class _SearchScreenState extends State<SearchScreen> {
   ScrollController? scrollController;
   WallpaperModel? wallpaperModel;
   TextEditingController searchController = TextEditingController();
+  int pageNo = 1;
+  List<PhotosModel> wallpaperModelList = [];
+  num totalPages = 0;
 
   @override
   void initState() {
@@ -27,7 +29,20 @@ class _SearchScreenState extends State<SearchScreen> {
     scrollController = ScrollController()
       ..addListener(() {
         if (scrollController!.position.pixels ==
-            scrollController!.position.maxScrollExtent) {}
+            scrollController!.position.maxScrollExtent) {
+          if (totalPages >= pageNo) {
+            pageNo++;
+            BlocProvider.of<SearchBloc>(context).add(
+              GetSearchedWallPaperFetch(
+                query: widget.SearchData,
+                colors: widget.color ?? "",
+                page: pageNo,
+              ),
+            );
+          } else {
+            ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("No More Results")));
+          }
+        }
       });
 
     BlocProvider.of<SearchBloc>(context).add(
@@ -80,63 +95,81 @@ class _SearchScreenState extends State<SearchScreen> {
                 : Container(),
           ),
           const SizedBox(height: 10),
-          BlocBuilder<SearchBloc, SearchState>(
-            builder: (_, state) {
-              if (state is SearchLoading) {
-                return const Center(child: CircularProgressIndicator());
-              } else if (state is SearchError) {
-                return Center(child: Text(state.mError));
-              } else if (state is SearchLoaded) {
+          BlocListener<SearchBloc, SearchState>(
+            listener: (_, state) {
+              if (state is SearchLoaded) {
+                totalPages = state.mDataModel.total_results! % 15 == 0
+                    ? state.mDataModel.total_results! ~/ 15
+                    : state.mDataModel.total_results! ~/ 15 + 1;
                 wallpaperModel = state.mDataModel;
-                return wallpaperModel!.photos!.isNotEmpty
-                    ? Expanded(
-                        flex: 3,
-                        child: GridView.builder(
-                          controller: scrollController,
-                          gridDelegate:
-                              SliverGridDelegateWithFixedCrossAxisCount(
-                                crossAxisCount: 2,
-                                crossAxisSpacing: 1,
-                                mainAxisSpacing: 1,
-                              ),
-                          itemCount: wallpaperModel!.photos!.length,
-                          itemBuilder: (ctx, index) {
-                            var photos =
-                                wallpaperModel!.photos![index].src!.portrait!;
-                            return Padding(
-                              padding: const EdgeInsets.all(8.0),
-                              child: Container(
-                                decoration: BoxDecoration(
-                                  borderRadius: BorderRadius.circular(12),
-                                  border: Border.all(
-                                    color: Colors.black,
-                                    width: 0.7,
-                                  ),
-                                  image: DecorationImage(
-                                    image: NetworkImage(photos),
-                                    fit: BoxFit.cover,
-                                  ),
-                                ),
-                                child: InkWell(
-                                  onTap: () {
-                                    Navigator.push(
-                                      context,
-                                      MaterialPageRoute(
-                                        builder: (_) =>
-                                            PreviewPage(wallpaperUrl: photos),
-                                      ),
-                                    );
-                                  },
-                                ),
-                              ),
-                            );
-                          },
-                        ),
-                      )
-                    : Center(child: Text("No Data Found"));
+                wallpaperModelList.addAll(wallpaperModel!.photos!);
+                setState(() {});
               }
-              return Container();
+              if (state is SearchError) {
+                ScaffoldMessenger.of(
+                  context,
+                ).showSnackBar(SnackBar(content: Text(state.mError)));
+              }
+              if (state is SearchLoading) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      crossAxisAlignment: CrossAxisAlignment.center,
+                      children: [
+                        Text("Loading..."),
+                        SizedBox(width: 10),
+                        CircularProgressIndicator(),
+                      ],
+                    ),
+                  ),
+                );
+              }
             },
+            child: wallpaperModelList.isNotEmpty
+                ? Expanded(
+                    flex: 3,
+                    child: GridView.builder(
+                      controller: scrollController,
+                      gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                        crossAxisCount: 2,
+                        crossAxisSpacing: 1,
+                        mainAxisSpacing: 1,
+                      ),
+                      itemCount: wallpaperModelList.length,
+                      itemBuilder: (ctx, index) {
+                        var photos = wallpaperModelList[index].src!.portrait!;
+                        return Padding(
+                          padding: const EdgeInsets.all(8.0),
+                          child: Container(
+                            decoration: BoxDecoration(
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(
+                                color: Colors.black,
+                                width: 0.7,
+                              ),
+                              image: DecorationImage(
+                                image: NetworkImage(photos),
+                                fit: BoxFit.cover,
+                              ),
+                            ),
+                            child: InkWell(
+                              onTap: () {
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (_) =>
+                                        PreviewPage(wallpaperUrl: photos),
+                                  ),
+                                );
+                              },
+                            ),
+                          ),
+                        );
+                      },
+                    ),
+                  )
+                : const Center(child: CircularProgressIndicator()),
           ),
         ],
       ),

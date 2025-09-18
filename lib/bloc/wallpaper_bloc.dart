@@ -16,7 +16,7 @@ class WallpaperBloc extends Bloc<WallpaperEvent, WallpaperState> {
     on<TrendingWallpaperFetch>((event, emit) async {
       emit(WallpaperLoading());
       try {
-        var rowWallData = await apiHelper.getAPI(Urls.TRENDING_WALLPAPER_URL);
+        var rowWallData = await apiHelper.getAPI("${Urls.TRENDING_WALLPAPER_URL}?page=${event.page}");
         var wallDataModel = WallpaperModel.fromJson(rowWallData);
         emit(WallpaperLoaded(mDataModel: wallDataModel));
       } catch (e) {

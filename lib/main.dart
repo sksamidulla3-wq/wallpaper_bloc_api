@@ -50,7 +50,7 @@ class _MyHomePageState extends State<MyHomePage> {
   TextEditingController searchController = TextEditingController();
   Future<WallpaperModel?>? wallpaperModel;
   Future<WallpaperModel?>? bestOfTheMonthWallpaper;
-
+  List<PhotosModel> wallpaperModelList = [];
   List<CategoryModel> categoryModel = [
     CategoryModel(
       title: "Nature",
@@ -83,6 +83,9 @@ class _MyHomePageState extends State<MyHomePage> {
           "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSyqw9Mg0glS6UYJlyYiByGavArF7Q8UjjGLQ&s",
     ),
   ];
+  ScrollController? scrollController;
+  int page = 0;
+  num? totalPages;
 
   List<ColorModel> colorModel = [
     ColorModel(colorValue: Colors.white, colorCode: "white"),
@@ -104,7 +107,28 @@ class _MyHomePageState extends State<MyHomePage> {
   @override
   void initState() {
     super.initState();
-    BlocProvider.of<WallpaperBloc>(context).add(TrendingWallpaperFetch());
+    // fetch first page automatically
+
+    scrollController = ScrollController()
+      ..addListener(() {
+        if (scrollController!.position.pixels ==
+            scrollController!.position.maxScrollExtent) {
+          if (totalPages != null && totalPages! > page) {
+            page++;
+            BlocProvider.of<WallpaperBloc>(
+              context,
+            ).add(TrendingWallpaperFetch(page: page));
+          } else {
+            ScaffoldMessenger.of(
+              context,
+            ).showSnackBar(SnackBar(content: Text("No More Results")));
+          }
+        }
+      });
+
+    BlocProvider.of<WallpaperBloc>(
+      context,
+    ).add(TrendingWallpaperFetch(page: page));
   }
 
   @override
@@ -144,50 +168,77 @@ class _MyHomePageState extends State<MyHomePage> {
   }
 
   Widget bestofMonthView() {
-    return BlocBuilder<WallpaperBloc, WallpaperState>(
-      builder: (context, state) {
+    return BlocListener<WallpaperBloc, WallpaperState>(
+      listener: (context, state) {
+        if (state is WallpaperLoaded) {
+          totalPages = state.mDataModel.total_results! % 15 == 0
+              ? state.mDataModel.total_results! ~/ 15
+              : state.mDataModel.total_results! ~/ 15 + 1;
+          wallpaperModel = Future.value(state.mDataModel);
+          if (page == 1) {
+            wallpaperModelList.clear();
+          }
+          wallpaperModelList.addAll(state.mDataModel.photos!);
+          setState(() {});
+        }
+        if (state is WallpaperError) {
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(SnackBar(content: Text(state.mError)));
+        }
         if (state is WallpaperLoading) {
-          return const Center(child: CircularProgressIndicator());
-        } else if (state is WallpaperError) {
-          return Center(child: Text(state.mError));
-        } else if (state is WallpaperLoaded) {
-          return Expanded(
-            flex: 1,
-            child: ListView.builder(
-              scrollDirection: Axis.horizontal,
-              itemCount: state.mDataModel.photos!.length,
-              itemBuilder: (_, index) {
-                var photo = state.mDataModel.photos![index].src!.portrait!;
-                return InkWell(
-                  onTap: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (_) => PreviewPage(wallpaperUrl: photo),
-                      ),
-                    );
-                  },
-                  child: Padding(
-                    padding: const EdgeInsets.all(5),
-                    child: Container(
-                      width: 100,
-                      decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(12),
-                        border: Border.all(color: Colors.black, width: 0.7),
-                        image: DecorationImage(
-                          image: NetworkImage(photo),
-                          fit: BoxFit.cover,
-                        ),
-                      ),
-                    ),
-                  ),
-                );
-              },
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+                  Text("Loading..."),
+                  SizedBox(width: 10),
+                  CircularProgressIndicator(),
+                ],
+              ),
             ),
           );
         }
-        return Container();
       },
+      child: wallpaperModelList.isNotEmpty
+          ? Expanded(
+              flex: 1,
+              child: ListView.builder(
+                controller: scrollController,
+                scrollDirection: Axis.horizontal,
+                itemCount: wallpaperModelList.length,
+                itemBuilder: (_, index) {
+                  var photo = wallpaperModelList[index].src!.portrait!;
+                  return InkWell(
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => PreviewPage(wallpaperUrl: photo),
+                        ),
+                      );
+                    },
+                    child: Padding(
+                      padding: const EdgeInsets.all(5),
+                      child: Container(
+                        width: 100,
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(color: Colors.black, width: 0.7),
+                          image: DecorationImage(
+                            image: NetworkImage(photo),
+                            fit: BoxFit.cover,
+                          ),
+                        ),
+                      ),
+                    ),
+                  );
+                },
+              ),
+            )
+          : const Center(child: CircularProgressIndicator()),
     );
   }
 

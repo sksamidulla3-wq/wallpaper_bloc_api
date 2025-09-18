@@ -58,6 +58,7 @@ class PreviewPage extends StatelessWidget {
                                     content: Text("Wallpaper saved to gallery"),
                                   ),
                                 );
+                                Navigator.pop(context);
                               },
                               child: Text("yes"),
                             ),
