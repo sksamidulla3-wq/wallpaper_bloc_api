@@ -38,7 +38,39 @@ class PreviewPage extends StatelessWidget {
                 // Save button
                 TextButton(
                   onPressed: () async {
-                    await saveWallpaper();
+                    showDialog(
+                      context: context,
+                      builder: (ctx) => AlertDialog(
+                        title: const Text(
+                          "Save the wallpaper to gallery",
+                          style: TextStyle(
+                            fontSize: 20,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        content: Row(
+                          children: [
+                            TextButton(
+                              onPressed: () {
+                                saveWallpaper();
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(
+                                    content: Text("Wallpaper saved to gallery"),
+                                  ),
+                                );
+                              },
+                              child: Text("yes"),
+                            ),
+                            TextButton(
+                              onPressed: () {
+                                Navigator.pop(context);
+                              },
+                              child: Text("no"),
+                            ),
+                          ],
+                        ),
+                      ),
+                    );
                   },
                   child: const Text(
                     "Save",
@@ -48,7 +80,25 @@ class PreviewPage extends StatelessWidget {
 
                 // Info button (future use)
                 TextButton(
-                  onPressed: () {},
+                  onPressed: () {
+                    // Handle info button press
+                    showDialog(
+                      context: context,
+                      builder: (ctx) => const AlertDialog(
+                        title: Text(
+                          "Info",
+                          style: TextStyle(
+                            fontSize: 20,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        content: Text(
+                          "This is a wallpaper preview",
+                          style: TextStyle(fontSize: 16),
+                        ),
+                      ),
+                    );
+                  },
                   child: const Text(
                     "Info",
                     style: TextStyle(color: Colors.white, fontSize: 16),
@@ -65,7 +115,43 @@ class PreviewPage extends StatelessWidget {
                     ),
                   ),
                   onPressed: () {
-                    applyWallpaper(context);
+                    showDialog(
+                      context: context,
+                      builder: (ctx) => AlertDialog(
+                        title: const Text(
+                          "Apply to ?",
+                          style: TextStyle(
+                            fontSize: 20,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        content: Row(
+                          children: [
+                            TextButton(
+                              onPressed: () {
+                                applyWallpaper(context, choice: 0);
+                                Navigator.pop(context);
+                              },
+                              child: Text("Home Screen"),
+                            ),
+                            TextButton(
+                              onPressed: () {
+                                applyWallpaper(context, choice: 1);
+                                Navigator.pop(context);
+                              },
+                              child: Text("Lock Screen"),
+                            ),
+                            TextButton(
+                              onPressed: () {
+                                applyWallpaper(context, choice: 2);
+                                Navigator.pop(context);
+                              },
+                              child: Text("Both Screen"),
+                            ),
+                          ],
+                        ),
+                      ),
+                    );
                   },
                   icon: const Icon(Icons.check),
                   label: const Text("Apply"),
@@ -107,19 +193,38 @@ class PreviewPage extends StatelessWidget {
   }
 
   // ✅ Apply wallpaper using wallpaper package
-  void applyWallpaper(BuildContext context) {
+  void applyWallpaper(BuildContext context, {int? choice}) {
     var imgStream = Wallpaper.imageDownloadProgress(wallpaperUrl);
-    imgStream.listen((event) {
-      print("Download progress: $event");
-    }, onDone: () async {
-      var result = await Wallpaper.homeScreen(
-        width: MediaQuery.of(context).size.width,
-        height: MediaQuery.of(context).size.height,
-        options: RequestSizeOptions.resizeFit,
-      );
-      print("✅ Applied: $result");
-    }, onError: (error) {
-      print("❌ Error: $error");
-    });
+    imgStream.listen(
+      (event) {
+        print("Download progress: $event");
+      },
+      onDone: () async {
+        var result;
+       if( choice == 0){
+          result = await Wallpaper.homeScreen(
+           width: MediaQuery.of(context).size.width,
+           height: MediaQuery.of(context).size.height,
+           options: RequestSizeOptions.resizeFit,
+         );
+       }else if(choice == 1){
+         result = await Wallpaper.lockScreen(
+           width: MediaQuery.of(context).size.width,
+           height: MediaQuery.of(context).size.height,
+           options: RequestSizeOptions.resizeFit,
+         );
+       }else{
+         result = await Wallpaper.bothScreen(
+           width: MediaQuery.of(context).size.width,
+           height: MediaQuery.of(context).size.height,
+           options: RequestSizeOptions.resizeFit,
+         );
+       }
+        print("✅ Applied: $result");
+      },
+      onError: (error) {
+        print("❌ Error: $error");
+      },
+    );
   }
 }

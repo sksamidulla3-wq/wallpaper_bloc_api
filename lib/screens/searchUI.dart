@@ -3,7 +3,6 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:wallpaper_bloc_api/screens/previewpage.dart';
 import 'package:wallpaper_bloc_api/screens/search%20bloc/search_bloc.dart';
 
-
 import '../models/models.dart';
 
 class SearchScreen extends StatefulWidget {
@@ -18,12 +17,19 @@ class SearchScreen extends StatefulWidget {
 }
 
 class _SearchScreenState extends State<SearchScreen> {
+  ScrollController? scrollController;
   WallpaperModel? wallpaperModel;
   TextEditingController searchController = TextEditingController();
 
   @override
   void initState() {
     super.initState();
+    scrollController = ScrollController()
+      ..addListener(() {
+        if (scrollController!.position.pixels ==
+            scrollController!.position.maxScrollExtent) {}
+      });
+
     BlocProvider.of<SearchBloc>(context).add(
       GetSearchedWallPaperFetch(
         query: widget.SearchData,
@@ -35,34 +41,43 @@ class _SearchScreenState extends State<SearchScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: Text(widget.isCategory! == false ? "Searched Wallpapers" : "${widget.SearchData} Wallpapers"), centerTitle: true),
+      appBar: AppBar(
+        title: Text(
+          widget.isCategory! == false
+              ? "Searched Wallpapers"
+              : "${widget.SearchData} Wallpapers",
+        ),
+        centerTitle: true,
+      ),
       body: Column(
         mainAxisAlignment: MainAxisAlignment.start,
         children: [
           Padding(
             padding: const EdgeInsets.all(3),
-            child: widget.isCategory == false ? TextField(
-              controller: searchController,
-              decoration: InputDecoration(
-                hintText: "Find Wallpaper",
-                prefixIcon: IconButton(
-                  onPressed: () {
-                    BlocProvider.of<SearchBloc>(context).add(
-                      GetSearchedWallPaperFetch(
-                        query: searchController.text.toString(),
+            child: widget.isCategory == false
+                ? TextField(
+                    controller: searchController,
+                    decoration: InputDecoration(
+                      hintText: "Find Wallpaper",
+                      prefixIcon: IconButton(
+                        onPressed: () {
+                          String query = searchController.text.trim();
+                          String safeQuery = Uri.encodeComponent(query);
+                          BlocProvider.of<SearchBloc>(
+                            context,
+                          ).add(GetSearchedWallPaperFetch(query: safeQuery));
+                        },
+                        icon: Icon(Icons.search),
                       ),
-                    );
-                  },
-                  icon: Icon(Icons.search),
-                ),
-                filled: true,
-                fillColor: Colors.white,
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(15),
-                  borderSide: BorderSide.none,
-                ),
-              ),
-            ) : Container(),
+                      filled: true,
+                      fillColor: Colors.white,
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(15),
+                        borderSide: BorderSide.none,
+                      ),
+                    ),
+                  )
+                : Container(),
           ),
           const SizedBox(height: 10),
           BlocBuilder<SearchBloc, SearchState>(
@@ -77,6 +92,7 @@ class _SearchScreenState extends State<SearchScreen> {
                     ? Expanded(
                         flex: 3,
                         child: GridView.builder(
+                          controller: scrollController,
                           gridDelegate:
                               SliverGridDelegateWithFixedCrossAxisCount(
                                 crossAxisCount: 2,

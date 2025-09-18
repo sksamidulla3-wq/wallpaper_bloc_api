@@ -121,7 +121,7 @@ class _MyHomePageState extends State<MyHomePage> {
       body: Column(
         mainAxisAlignment: MainAxisAlignment.start,
         children: [
-          const SizedBox(height: 10),
+          const SizedBox(height: 25),
           theSearchBox(),
           const Text(
             "Color Tone",
@@ -152,7 +152,7 @@ class _MyHomePageState extends State<MyHomePage> {
           return Center(child: Text(state.mError));
         } else if (state is WallpaperLoaded) {
           return Expanded(
-            flex: 2,
+            flex: 1,
             child: ListView.builder(
               scrollDirection: Axis.horizontal,
               itemCount: state.mDataModel.photos!.length,
@@ -247,6 +247,8 @@ class _MyHomePageState extends State<MyHomePage> {
           hintText: "Find Wallpaper",
           prefixIcon: IconButton(
             onPressed: () {
+              String query = searchController.text.trim();
+              String safeQuery = Uri.encodeComponent(query);
               if (searchController.text.isNotEmpty) {
                 Navigator.push(
                   context,
@@ -258,10 +260,7 @@ class _MyHomePageState extends State<MyHomePage> {
                           appDataBase: AppDataBase.instance,
                         ),
                         child: SearchScreen(
-                          SearchData:
-                              searchController.text.toString().isNotEmpty
-                              ? searchController.text.toString()
-                              : "",
+                          SearchData: safeQuery.isNotEmpty ? safeQuery : "",
                         ),
                       );
                     },
@@ -288,7 +287,7 @@ class _MyHomePageState extends State<MyHomePage> {
 
   Widget wallpaperView() {
     return Expanded(
-      flex: 3,
+      flex: 2,
       child: GridView.builder(
         gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
           crossAxisCount: 2,
@@ -333,8 +332,9 @@ class _MyHomePageState extends State<MyHomePage> {
                     categoryModel[index].title.toString(),
                     style: TextStyle(
                       fontSize: 18,
-                      fontWeight: FontWeight.w400,
-                      color: Colors.grey.shade900,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.black,
+                      fontStyle: FontStyle.normal,
                     ),
                   ),
                 ),
